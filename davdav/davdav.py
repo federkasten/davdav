@@ -34,6 +34,10 @@ from thumbnail import ThumbnailDao
 
 app = Flask(__name__)
 
+sample_dir = os.path.join(os.path.dirname(__file__), '..', 'samples')
+picture_dir = os.path.join(sample_dir, 'picture')
+thumbnail_dir = os.path.join(sample_dir, 'thumbnail')
+
 try:
     app.config.from_envvar('DAVDAV_CONFIG')
 except RuntimeError:
@@ -42,7 +46,7 @@ except RuntimeError:
     app.config['DB_URI'] = 'mysql://root:root@localhost/davdav?charset=utf8'
     app.config['WEBDAV_ROOT_URL'] = 'http://localhost:5000/test/main'
     app.config['THUMB_ROOT_URL'] = 'http://localhost:5000/test/thumbnail'
-    app.config['WEBDAV_DIR'] = os.path.join(os.path.dirname(__file__), 'static/test/main')
+    app.config['WEBDAV_DIR'] =
     app.config['THUMB_DIR'] = os.path.join(os.path.dirname(__file__),'static/test/thumbnail')
     app.config['NUM_BY_PAGE'] = 2
     app.config['FOOTER_ENABLE'] = True
