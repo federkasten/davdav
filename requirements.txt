@@ -1,0 +1,5 @@
+Flask
+SQLAlchemy
+MySQL-python
+PIL
+configobj
