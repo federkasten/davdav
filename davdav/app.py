@@ -23,7 +23,6 @@ import datetime
 import math
 import os
 import re
-import sys
 from functools import wraps
 
 from flask import Flask, Response
@@ -38,22 +37,21 @@ app = Flask(__name__)
 try:
     app.config.from_envvar('DAVDAV_CONFIG')
 except RuntimeError:
-    app.debug   = True
+    app.debug = True
     app.testing = True
-    app.config['DB_URI']          = 'mysql://root:root@localhost/davdav?charset=utf8'
+    app.config['DB_URI'] = 'mysql://root:root@localhost/davdav?charset=utf8'
     app.config['WEBDAV_ROOT_URL'] = 'http://localhost:5000/test/main'
-    app.config['THUMB_ROOT_URL']  = 'http://localhost:5000/test/thumbnail'
-    app.config['WEBDAV_DIR']      = os.path.join(os.path.dirname(__file__), 'static/test/main')
-    app.config['THUMB_DIR']       = os.path.join(os.path.dirname(__file__),'static/test/thumbnail')
-    app.config['NUM_BY_PAGE']     = 2
-    app.config['FOOTER_ENABLE']   = True
-    app.config['AUTH_ENABLE']     = True
-    app.config['AUTH_USERNAME']   = 'username'
-    app.config['AUTH_PASSWORD']   = 'password'
+    app.config['THUMB_ROOT_URL'] = 'http://localhost:5000/test/thumbnail'
+    app.config['WEBDAV_DIR'] = os.path.join(os.path.dirname(__file__), 'static/test/main')
+    app.config['THUMB_DIR'] = os.path.join(os.path.dirname(__file__),'static/test/thumbnail')
+    app.config['NUM_BY_PAGE'] = 2
+    app.config['FOOTER_ENABLE'] = True
+    app.config['AUTH_ENABLE'] = True
+    app.config['AUTH_USERNAME'] = 'username'
+    app.config['AUTH_PASSWORD'] = 'password'
 
-app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {
-        '/': os.path.join(os.path.dirname(__file__), 'static')
-        })
+static_dir = os.path.join(os.path.dirname(__file__), '..', 'static')
+app.wsgi_app = SharedDataMiddleware(app.wsgi_app, {'/': static_dir})
 
 engine = create_engine(app.config['DB_URI'],
                        encoding='utf-8',
@@ -68,11 +66,13 @@ thumbnail_dao = ThumbnailDao(engine)
 def check_auth(username, password):
     return username == app.config['AUTH_USERNAME'] and password == app.config['AUTH_PASSWORD']
 
+
 def authenticate():
     return Response(
     'Could not verify your access level for that URL.\n'
     'You have to login with proper credentials', 401,
     {'WWW-Authenticate': 'Basic realm="Login Required"'})
+
 
 def requires_auth(f):
     @wraps(f)
@@ -112,16 +112,19 @@ def root():
     if page < pages - 1:
         next_page = page + 1
 
-    return render_template('main.html', dav_dates=dav_dates,
-                                        prev_page=prev_page,
-                                        next_page=next_page,
-                                        footer_enable=app.config['FOOTER_ENABLE'])
+    return render_template('main.html',
+                           dav_dates=dav_dates,
+                           prev_page=prev_page,
+                           next_page=next_page,
+                           footer_enable=app.config['FOOTER_ENABLE'])
+
 
 @app.route('/top')
 @app.route('/home')
 @app.route('/main')
 def redirect_root():
     return redirect('/')
+
 
 @app.route('/detail/<path:img_path>')
 def detail(img_path):
@@ -134,11 +137,12 @@ def detail(img_path):
     next_img_ref = prev_next_img['next_img']
 
     return render_template('detail.html', title=title,
-                                          src=img_src,
-                                          href=img_src,
-                                          prev_ref=prev_img_ref,
-                                          next_ref=next_img_ref,
-                                          footer_enable=app.config['FOOTER_ENABLE'])
+                           src=img_src,
+                           href=img_src,
+                           prev_ref=prev_img_ref,
+                           next_ref=next_img_ref,
+                           footer_enable=app.config['FOOTER_ENABLE'])
+
 
 @app.route('/disable', methods=['POST'])
 @requires_auth
@@ -151,7 +155,7 @@ def disable():
 # Other functions
 
 def _get_dav_dates(page=0):
-    webdav_dir  = app.config['WEBDAV_DIR']
+    webdav_dir = app.config['WEBDAV_DIR']
     num_by_page = app.config['NUM_BY_PAGE']
 
     dav_dates = []
@@ -197,10 +201,10 @@ def _get_dav_dates(page=0):
                 except:
                     continue
 
-                if thumbnail != None and thumbnail.enable == 0:
+                if thumbnail is not None and thumbnail.enable == 0:
                     continue
 
-                if thumbnail != None:
+                if thumbnail is not None:
                     src = '%s/%s' % (app.config['THUMB_ROOT_URL'], thumbnail.thumbnail)
                     thumb_id = thumbnail.id
                 else:
@@ -209,16 +213,21 @@ def _get_dav_dates(page=0):
 
                 href = '/detail/' + d + '/' + f
 
-                dav_img = { 'title': title, 'src': src, 'href': href, 'thumb_id': thumb_id }
+                dav_img = {'title': title,
+                           'src': src,
+                           'href': href,
+                           'thumb_id': thumb_id}
                 dav_imgs.append(dav_img)
 
-        dav_date = { 'title': group_title, 'dav_imgs': dav_imgs }
+        dav_date = {'title': group_title,
+                    'dav_imgs': dav_imgs}
         dav_dates.append(dav_date)
 
     return dav_dates
 
+
 def _count_pages():
-    webdav_dir  = app.config['WEBDAV_DIR']
+    webdav_dir = app.config['WEBDAV_DIR']
     num_by_page = app.config['NUM_BY_PAGE']
 
     pages = 0
@@ -229,13 +238,15 @@ def _count_pages():
 
     return math.ceil(float(pages) / num_by_page)
 
+
 def _format_date(dt_str, src_format, dst_format):
     dt = datetime.datetime.strptime(dt_str, src_format)
     return dt.strftime(dst_format)
 
+
 def _get_prev_next_img(img_path):
-    webdav_dir  = app.config['WEBDAV_DIR']
-    num_by_page = app.config['NUM_BY_PAGE']
+    webdav_dir = app.config['WEBDAV_DIR']
+    # num_by_page = app.config['NUM_BY_PAGE']
 
     dirs = os.listdir(webdav_dir)
     dirs.sort()
@@ -283,9 +294,9 @@ def _get_prev_next_img(img_path):
 
                 if next_find_flag == 0:
                     tmp_ref = '/detail/' + d + '/' + f
-                    tmp_path = orig_path
+                    # tmp_path = orig_path
 
-    prev_next_imgs = { 'prev_img': prev_img, 'next_img': next_img }
+    prev_next_imgs = {'prev_img': prev_img, 'next_img': next_img}
 
     return prev_next_imgs
 
